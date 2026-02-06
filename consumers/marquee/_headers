@@ -3,4 +3,4 @@
   Referrer-Policy: no-referrer
   X-Frame-Options: DENY
   Permissions-Policy: document-domain=()
-  Content-Security-Policy: default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://static.cloudflareinsights.com; style-src 'self'; connect-src 'self' wss://rand.haha.computer https://cloudflareinsights.com; img-src 'self' data:; base-uri 'none'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://static.cloudflareinsights.com; style-src 'self'; connect-src 'self' wss://rand.haha.computer https://cloudflareinsights.com; img-src 'self' data:; base-uri 'none'; frame-ancestors 'none'
