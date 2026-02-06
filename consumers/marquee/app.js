@@ -2,7 +2,7 @@ const { Engine, Bodies, Body, Composite, Runner } = Matter;
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
 const statusEl = document.getElementById("status");
-const STREAM_URL = "wss://rando.haha.computer";
+const STREAM_URL = "wss://rand.haha.computer";
 const MAX_BODIES = 200;
 const R = 16;
 
