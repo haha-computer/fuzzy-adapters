@@ -1,0 +1,186 @@
+const { Engine, Bodies, Body, Composite, Runner } = Matter;
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+const statusEl = document.getElementById("status");
+const STREAM_URL = "wss://rando.haha.computer";
+const MAX_BODIES = 200;
+const R = 16;
+
+const BALL_COLORS = [
+  "#e74c3c", "#e55b8c", "#f39c12", "#f1c40f",
+  "#2ecc71", "#1abc9c", "#3498db", "#5b6be7",
+  "#9b59b6", "#e67e22", "#1dd1a1", "#ff6b6b",
+  "#48dbfb", "#feca57", "#ff9ff3", "#54a0ff",
+];
+
+let W, H;
+let bg;
+let digitColor;
+
+const engine = Engine.create({
+  gravity: { x: 0, y: 1.2 },
+  enableSleeping: true,
+});
+engine.positionIterations = 4;
+engine.velocityIterations = 4;
+engine.constraintIterations = 2;
+const digitBodies = [];
+
+function refreshTheme() {
+  const styles = getComputedStyle(document.documentElement);
+  bg = styles
+    .getPropertyValue("--bg")
+    .trim();
+  digitColor = styles
+    .getPropertyValue("--digit")
+    .trim();
+}
+
+function resize() {
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W;
+  canvas.height = H;
+}
+
+window.addEventListener("resize", resize);
+window.matchMedia("(prefers-color-scheme: dark)")
+  .addEventListener("change", refreshTheme);
+refreshTheme();
+resize();
+
+function fireDigit(ch) {
+  while (digitBodies.length >= MAX_BODIES) {
+    const old = digitBodies.shift();
+    if (old) {
+      Composite.remove(engine.world, old);
+    }
+  }
+
+  const y = H * 0.4 + (Math.random() - 0.5) * 60;
+
+  const body = Bodies.circle(-R, y, R, {
+    restitution: 0.5,
+    friction: 0.3,
+    frictionAir: 0.008,
+    density: 0.003,
+    label: ch,
+  });
+
+  const speed = 10 + Math.random() * 8;
+  const angle = (Math.random() - 0.5) * 0.9;
+  Body.setVelocity(body, {
+    x: speed * Math.cos(angle),
+    y: speed * Math.sin(angle) - 2,
+  });
+
+  body._color = BALL_COLORS[Math.floor(Math.random() * BALL_COLORS.length)];
+  Composite.add(engine.world, body);
+  digitBodies.push(body);
+}
+
+function cull() {
+  for (let i = digitBodies.length - 1; i >= 0; i--) {
+    const b = digitBodies[i];
+    if (b.position.y > H + R * 2 || b.position.x > W + R * 2) {
+      Composite.remove(engine.world, b);
+      digitBodies.splice(i, 1);
+    }
+  }
+}
+
+function draw() {
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  cull();
+
+  ctx.font = `700 ${R * 1.1}px system-ui, -apple-system, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  for (const b of digitBodies) {
+    const x = b.position.x;
+    const y = b.position.y;
+
+    // ball
+    ctx.beginPath();
+    ctx.arc(x, y, R, 0, Math.PI * 2);
+    ctx.fillStyle = b._color;
+    ctx.fill();
+
+    // digit
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(b.angle);
+    ctx.fillStyle = digitColor;
+    ctx.fillText(b.label, 0, 1);
+    ctx.restore();
+  }
+
+  requestAnimationFrame(draw);
+}
+
+Runner.run(Runner.create(), engine);
+draw();
+
+let lastData = 0;
+
+let ws = null;
+let reconnectTimer = null;
+
+function setStatus(text, className) {
+  if (!statusEl) return;
+  statusEl.setAttribute("aria-label", text);
+  statusEl.setAttribute("title", text);
+  statusEl.className = className;
+}
+
+function scheduleReconnect() {
+  if (reconnectTimer) return;
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    connect();
+  }, 2000);
+}
+
+function connect() {
+  if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+    ws.onclose = null;
+    ws.onerror = null;
+    ws.close();
+  }
+
+  const socket = new WebSocket(STREAM_URL);
+  ws = socket;
+
+  socket.onopen = () => {
+    setStatus(`streaming from ${STREAM_URL}`, "connected");
+    lastData = Date.now();
+  };
+
+  socket.onmessage = (e) => {
+    fireDigit(e.data);
+    lastData = Date.now();
+  };
+
+  socket.onclose = () => {
+    if (socket !== ws) return;
+    setStatus("disconnected \u2014 reconnecting...", "disconnected");
+    scheduleReconnect();
+  };
+
+  socket.onerror = () => {
+    if (socket !== ws) return;
+    socket.close();
+  };
+}
+
+setInterval(() => {
+  if (lastData && Date.now() - lastData > 5000) {
+    lastData = 0;
+    connect();
+  }
+}, 2000);
+
+connect();

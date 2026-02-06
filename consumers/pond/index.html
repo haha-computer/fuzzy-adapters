@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>pond - fuzzy adapters</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #080c18; overflow: hidden; }
+    canvas { display: block; }
+    header {
+      position: fixed; top: 0; left: 0; z-index: 10;
+      padding: 1.5rem 2rem 1rem;
+    }
+    header h1 {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 0.95rem; font-weight: 400; color: #2a3050;
+      font-style: italic; letter-spacing: 0.05em;
+    }
+    #status {
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 0.65rem; color: #1a2040; margin-top: 0.3rem;
+    }
+    #status.connected { color: #3a6a5a; }
+    #status.disconnected { color: #6a3a3a; }
+    #tap {
+      position: fixed; bottom: 2.5rem; left: 50%;
+      transform: translateX(-50%);
+      font-family: Georgia, serif;
+      font-size: 0.8rem; font-style: italic; color: #2a3050;
+      opacity: 0.8;
+      animation: pulse 3s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 0.8; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>pond</h1>
+    <div id="status" class="disconnected">disconnected</div>
+  </header>
+  <div id="tap">tap anywhere for sound</div>
+  <canvas id="c"></canvas>
+
+  <script>
+    const canvas = document.getElementById("c");
+    const ctx = canvas.getContext("2d");
+    const statusEl = document.getElementById("status");
+    const tapEl = document.getElementById("tap");
+
+    const params = new URLSearchParams(location.search);
+    const STREAM_URL = params.get("stream") || "ws://localhost:8765";
+
+    // two octaves of C major pentatonic
+    const NOTES = [
+      261.63, 293.66, 329.63, 392.00, 440.00,
+      523.25, 587.33, 659.25, 783.99, 880.00,
+      1046.50, 1174.66, 1318.51, 1567.98, 1760.00,
+      2093.00,
+    ];
+
+    // warm → cool
+    const COLORS = [
+      [255, 107, 107], [255, 142, 114], [255, 176, 122], [255, 211, 130],
+      [255, 233, 138], [196, 232, 158], [126, 214, 168], [94, 196, 182],
+      [79, 178, 196], [72, 160, 210], [91, 142, 231], [110, 124, 240],
+      [139, 106, 224], [166, 88, 208], [192, 70, 192], [216, 52, 176],
+    ];
+
+    let W, H;
+    let audioCtx = null;
+
+    function resize() {
+      W = window.innerWidth;
+      H = window.innerHeight;
+      canvas.width = W;
+      canvas.height = H;
+      // repaint background on resize
+      ctx.fillStyle = "#080c18";
+      ctx.fillRect(0, 0, W, H);
+    }
+    window.addEventListener("resize", resize);
+    resize();
+
+    // --- audio ---
+
+    document.body.addEventListener("click", () => {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        tapEl.style.display = "none";
+      }
+    }, { once: true });
+
+    function pluck(val) {
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      const freq = NOTES[val] * (1 + (Math.random() - 0.5) * 0.006);
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      const pan = audioCtx.createStereoPanner();
+
+      osc.type = "triangle";
+      osc.frequency.value = freq;
+
+      // higher notes: slightly louder, shorter decay
+      const vol = 0.025 + (val / 15) * 0.02;
+      const decay = 0.5 - (val / 15) * 0.28;
+
+      gain.gain.setValueAtTime(vol, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + decay);
+
+      pan.pan.value = (Math.random() - 0.5) * 1.6;
+
+      osc.connect(gain);
+      gain.connect(pan);
+      pan.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + decay + 0.01);
+    }
+
+    // --- ripples ---
+
+    const ripples = [];
+
+    function addRipple(val) {
+      const x = Math.random() * W;
+      const y = Math.random() * H;
+      const maxR = 35 + (15 - val) * 5;
+      const speed = 0.6 + val * 0.12;
+      const [r, g, b] = COLORS[val];
+
+      // impact flash
+      ripples.push({
+        x, y, r: 0, maxR: 8, speed: 2,
+        rgb: `${r},${g},${b}`,
+        fill: true, alpha: 0.5,
+      });
+
+      // first ring
+      ripples.push({
+        x, y, r: 3, maxR,
+        speed, rgb: `${r},${g},${b}`,
+        fill: false, alpha: 0.55,
+      });
+
+      // second ring, slightly delayed and bigger
+      ripples.push({
+        x, y, r: 1, maxR: maxR * 1.4,
+        speed: speed * 0.7,
+        rgb: `${r},${g},${b}`,
+        fill: false, alpha: 0.25,
+      });
+    }
+
+    // --- draw ---
+
+    function draw() {
+      // slow fade — gives ripples a ghostly trail on the water
+      ctx.fillStyle = "rgba(8, 12, 24, 0.08)";
+      ctx.fillRect(0, 0, W, H);
+
+      for (let i = ripples.length - 1; i >= 0; i--) {
+        const rip = ripples[i];
+        rip.r += rip.speed;
+        const life = 1 - rip.r / rip.maxR;
+
+        if (life <= 0) {
+          ripples.splice(i, 1);
+          continue;
+        }
+
+        const a = rip.alpha * life;
+
+        if (rip.fill) {
+          ctx.beginPath();
+          ctx.arc(rip.x, rip.y, Math.max(0, rip.r), 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${rip.rgb},${a})`;
+          ctx.fill();
+        } else {
+          ctx.beginPath();
+          ctx.arc(rip.x, rip.y, rip.r, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(${rip.rgb},${a})`;
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+      }
+
+      requestAnimationFrame(draw);
+    }
+
+    draw();
+
+    // --- stream ---
+
+    let lastData = 0;
+
+    function onDigit(ch) {
+      const val = parseInt(ch, 16);
+      addRipple(val);
+      pluck(val);
+    }
+
+    function connect() {
+      const ws = new WebSocket(STREAM_URL);
+
+      ws.onopen = () => {
+        statusEl.textContent = `${STREAM_URL}`;
+        statusEl.className = "connected";
+        lastData = Date.now();
+      };
+
+      ws.onmessage = (e) => {
+        onDigit(e.data);
+        lastData = Date.now();
+      };
+
+      ws.onclose = () => {
+        statusEl.textContent = "disconnected \u2014 reconnecting\u2026";
+        statusEl.className = "disconnected";
+        setTimeout(connect, 2000);
+      };
+
+      ws.onerror = () => ws.close();
+    }
+
+    setInterval(() => {
+      if (lastData && Date.now() - lastData > 5000) {
+        lastData = 0;
+        connect();
+      }
+    }, 2000);
+
+    connect();
+  </script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #dbedf6;
+  --text-muted: #a7b0b6;
+  --status-muted: #aeb9bf;
+  --status-connected: #4fb56a;
+  --status-disconnected: #cf6d6d;
+  --status-ring: rgba(0, 0, 0, 0.08);
+  --digit: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1a22;
+    --text-muted: #7f8b94;
+    --status-muted: #8b97a0;
+    --status-connected: #57c07a;
+    --status-disconnected: #d17979;
+    --status-ring: rgba(255, 255, 255, 0.12);
+    --digit: #f2f5f7;
+  }
+}
+body { background: var(--bg); overflow: hidden; }
+#status {
+  position: fixed;
+  top: 1rem;
+  right: 1.25rem;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--status-muted);
+  box-shadow: 0 0 0 2px var(--status-ring);
+  opacity: 0.7;
+}
+#status.connected { background: var(--status-connected); opacity: 0.9; }
+#status.disconnected { background: var(--status-disconnected); opacity: 0.8; }
+canvas { display: block; }
