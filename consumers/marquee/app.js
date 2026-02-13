@@ -1,10 +1,13 @@
 const { Engine, Bodies, Body, Composite, Runner } = Matter;
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
-const statusEl = document.getElementById("status");
-const STREAM_URL = "wss://rand.haha.computer";
 const MAX_BODIES = 200;
 const R = 16;
+
+const STREAMS = [
+  { url: "wss://rand.haha.computer", side: "left" },
+  { url: "wss://entropy.haha.computer", side: "right" },
+];
 
 const BALL_COLORS = [
   "#e74c3c", "#e55b8c", "#f39c12", "#f1c40f",
@@ -49,7 +52,7 @@ window.matchMedia("(prefers-color-scheme: dark)")
 refreshTheme();
 resize();
 
-function fireDigit(ch) {
+function fireDigit(ch, side) {
   while (digitBodies.length >= MAX_BODIES) {
     const old = digitBodies.shift();
     if (old) {
@@ -58,8 +61,10 @@ function fireDigit(ch) {
   }
 
   const y = H * 0.4 + (Math.random() - 0.5) * 60;
+  const fromLeft = side === "left";
+  const startX = fromLeft ? -R : W + R;
 
-  const body = Bodies.circle(-R, y, R, {
+  const body = Bodies.circle(startX, y, R, {
     restitution: 0.5,
     friction: 0.3,
     frictionAir: 0.008,
@@ -69,8 +74,9 @@ function fireDigit(ch) {
 
   const speed = 10 + Math.random() * 8;
   const angle = (Math.random() - 0.5) * 0.9;
+  const dir = fromLeft ? 1 : -1;
   Body.setVelocity(body, {
-    x: speed * Math.cos(angle),
+    x: dir * speed * Math.cos(angle),
     y: speed * Math.sin(angle) - 2,
   });
 
@@ -82,7 +88,7 @@ function fireDigit(ch) {
 function cull() {
   for (let i = digitBodies.length - 1; i >= 0; i--) {
     const b = digitBodies[i];
-    if (b.position.y > H + R * 2 || b.position.x > W + R * 2) {
+    if (b.position.y > H + R * 2 || b.position.x > W + R * 2 || b.position.x < -R * 2) {
       Composite.remove(engine.world, b);
       digitBodies.splice(i, 1);
     }
@@ -124,63 +130,77 @@ function draw() {
 Runner.run(Runner.create(), engine);
 draw();
 
-let lastData = 0;
+// --- WebSocket connections ---
 
-let ws = null;
-let reconnectTimer = null;
+const streamsEl = document.getElementById("streams");
 
-function setStatus(text, className) {
-  if (!statusEl) return;
-  statusEl.setAttribute("aria-label", text);
-  statusEl.setAttribute("title", text);
-  statusEl.className = className;
-}
+function createConnection(stream) {
+  const dot = document.createElement("div");
+  dot.className = "status disconnected";
+  dot.setAttribute("aria-label", "disconnected");
+  dot.setAttribute("title", "disconnected");
+  streamsEl.appendChild(dot);
 
-function scheduleReconnect() {
-  if (reconnectTimer) return;
-  reconnectTimer = setTimeout(() => {
-    reconnectTimer = null;
-    connect();
+  const conn = {
+    ws: null,
+    reconnectTimer: null,
+    lastData: 0,
+  };
+
+  function setStatus(text, className) {
+    dot.setAttribute("aria-label", text);
+    dot.setAttribute("title", text);
+    dot.className = "status " + className;
+  }
+
+  function scheduleReconnect() {
+    if (conn.reconnectTimer) return;
+    conn.reconnectTimer = setTimeout(() => {
+      conn.reconnectTimer = null;
+      connect();
+    }, 2000);
+  }
+
+  function connect() {
+    if (conn.ws && (conn.ws.readyState === WebSocket.OPEN || conn.ws.readyState === WebSocket.CONNECTING)) {
+      conn.ws.onclose = null;
+      conn.ws.onerror = null;
+      conn.ws.close();
+    }
+
+    const socket = new WebSocket(stream.url);
+    conn.ws = socket;
+
+    socket.onopen = () => {
+      setStatus(`streaming from ${stream.url}`, "connected");
+      conn.lastData = Date.now();
+    };
+
+    socket.onmessage = (e) => {
+      fireDigit(e.data, stream.side);
+      conn.lastData = Date.now();
+    };
+
+    socket.onclose = () => {
+      if (socket !== conn.ws) return;
+      setStatus("disconnected \u2014 reconnecting...", "disconnected");
+      scheduleReconnect();
+    };
+
+    socket.onerror = () => {
+      if (socket !== conn.ws) return;
+      socket.close();
+    };
+  }
+
+  setInterval(() => {
+    if (conn.lastData && Date.now() - conn.lastData > 5000) {
+      conn.lastData = 0;
+      connect();
+    }
   }, 2000);
+
+  connect();
 }
 
-function connect() {
-  if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
-    ws.onclose = null;
-    ws.onerror = null;
-    ws.close();
-  }
-
-  const socket = new WebSocket(STREAM_URL);
-  ws = socket;
-
-  socket.onopen = () => {
-    setStatus(`streaming from ${STREAM_URL}`, "connected");
-    lastData = Date.now();
-  };
-
-  socket.onmessage = (e) => {
-    fireDigit(e.data);
-    lastData = Date.now();
-  };
-
-  socket.onclose = () => {
-    if (socket !== ws) return;
-    setStatus("disconnected \u2014 reconnecting...", "disconnected");
-    scheduleReconnect();
-  };
-
-  socket.onerror = () => {
-    if (socket !== ws) return;
-    socket.close();
-  };
-}
-
-setInterval(() => {
-  if (lastData && Date.now() - lastData > 5000) {
-    lastData = 0;
-    connect();
-  }
-}, 2000);
-
-connect();
+STREAMS.forEach(createConnection);
