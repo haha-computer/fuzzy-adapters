@@ -72,7 +72,7 @@ function fireDigit(ch, side) {
     label: ch,
   });
 
-  const speed = 10 + Math.random() * 8;
+  const speed = 18 + Math.random() * 10;
   const angle = (Math.random() - 0.5) * 0.9;
   const dir = fromLeft ? 1 : -1;
   Body.setVelocity(body, {
