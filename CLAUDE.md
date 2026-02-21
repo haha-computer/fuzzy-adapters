@@ -49,13 +49,10 @@ Don't merge a PR with a failing hardware-test — that check is the ground truth
 
 **Never push directly to `main`.** The deploy pipeline runs on merge, so main = production.
 
-Workflow:
 1. Create a branch and open a PR
 2. CI runs automatically — lint on Ubuntu, hardware tests on both boards
 3. Merge only when all checks are green
 4. Deploy runs automatically after merge — no manual steps needed
-
-Use `gh` for GitHub operations if available (create PR, check CI status, merge, etc.). If `gh` is not in PATH, try `/opt/homebrew/bin/gh` directly.
 
 ## Dev setup
 
