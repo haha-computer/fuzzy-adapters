@@ -11,3 +11,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/ruff-action@v3
+
+  hardware-test:
+    runs-on: [self-hosted, linux, ARM64, rpi]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-test.txt
+
+      - name: Run hardware tests
+        run: pytest tests/ -v
