@@ -55,7 +55,7 @@ Workflow:
 3. Merge only when all checks are green
 4. Deploy runs automatically after merge — no manual steps needed
 
-Use `gh` for GitHub operations (create PR, check CI status, merge, etc.).
+Use `gh` for GitHub operations if available (create PR, check CI status, merge, etc.). If `gh` is not in PATH, try `/opt/homebrew/bin/gh` directly.
 
 ## Dev setup
 
