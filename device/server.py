@@ -83,6 +83,7 @@ async def broadcast():
 
 async def handler(websocket):
     CONNECTIONS.add(websocket)
+    print(f"[stream] client connected ({len(CONNECTIONS)} total)")
     try:
         async for _ in websocket:
             pass
@@ -90,6 +91,7 @@ async def handler(websocket):
         pass
     finally:
         CONNECTIONS.discard(websocket)
+        print(f"[stream] client disconnected ({len(CONNECTIONS)} total)")
 
 
 async def main():
