@@ -18,7 +18,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install dependencies
-        run: pip install -r requirements.txt -r requirements-test.txt
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install -r requirements.txt -r requirements-test.txt
 
       - name: Run hardware tests
-        run: pytest tests/ -v
+        run: .venv/bin/pytest tests/ -v
