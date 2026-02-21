@@ -40,12 +40,16 @@ scp -i ~/.ssh/id_ed25519_rpi device/server.py matt@rpi.local:/home/matt/server.p
 ssh -i ~/.ssh/id_ed25519_rpi matt@rpi.local "sudo systemctl restart fuzzy-stream"
 ```
 
-## CI
+## CI/CD
 
-Every PR gets two checks:
+The full loop runs automatically — no manual deploys needed.
 
-- **lint** — ruff, runs on GitHub-hosted Ubuntu
-- **hardware-test** — runs on the Pi itself (`rpi-zero2w` self-hosted runner, labels: `self-hosted linux ARM64 rpi`)
+**On every PR:**
+- **lint** — ruff, GitHub-hosted Ubuntu
+- **hardware-test** — runs on both `rpi` and `coral` self-hosted runners in parallel
+
+**On merge to main (after CI passes):**
+- **deploy** — each runner copies `server.py` to its own device and restarts `fuzzy-stream.service`
 
 `tests/test_hardware.py` covers: temp sensor returns a plausible float, entropy stir functions don't crash, and the WebSocket server streams valid hex digits. Tests use port 8766 so they never touch the live service on 8765.
 
