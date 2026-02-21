@@ -28,17 +28,7 @@ Both boards run Python 3 at `/usr/bin/python3`. The Coral is on **Python 3.7** (
 - `fuzzy-stream.service` — runs `server.py`, restarts on failure
 - `fuzzy-tunnel.service` — runs `cloudflared tunnel run <name>`, depends on `fuzzy-stream`
 
-Both services are enabled and start automatically on boot. To deploy a new `server.py`:
-
-```bash
-# Coral
-scp -i ~/.config/mdt/keys/mdt.key device/server.py mendel@192.168.0.61:/home/mendel/server.py
-ssh -i ~/.config/mdt/keys/mdt.key mendel@192.168.0.61 "sudo systemctl restart fuzzy-stream"
-
-# Pi
-scp -i ~/.ssh/id_ed25519_rpi device/server.py matt@rpi.local:/home/matt/server.py
-ssh -i ~/.ssh/id_ed25519_rpi matt@rpi.local "sudo systemctl restart fuzzy-stream"
-```
+Both services are enabled and start automatically on boot.
 
 ## CI/CD
 
@@ -54,6 +44,18 @@ The full loop runs automatically — no manual deploys needed.
 `tests/test_hardware.py` covers: temp sensor returns a plausible float, entropy stir functions don't crash, and the WebSocket server streams valid hex digits. Tests use port 8766 so they never touch the live service on 8765.
 
 Don't merge a PR with a failing hardware-test — that check is the ground truth.
+
+## Contributing
+
+**Never push directly to `main`.** The deploy pipeline runs on merge, so main = production.
+
+Workflow:
+1. Create a branch and open a PR
+2. CI runs automatically — lint on Ubuntu, hardware tests on both boards
+3. Merge only when all checks are green
+4. Deploy runs automatically after merge — no manual steps needed
+
+Use `gh` for GitHub operations (create PR, check CI status, merge, etc.).
 
 ## Dev setup
 
