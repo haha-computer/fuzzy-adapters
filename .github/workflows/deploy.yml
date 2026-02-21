@@ -1,0 +1,27 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    if: github.event.workflow_run.conclusion == 'success'
+    strategy:
+      matrix:
+        include:
+          - board: rpi
+            dest: /home/matt/server.py
+          - board: coral
+            dest: /home/mendel/server.py
+    runs-on: [self-hosted, linux, ARM64, "${{ matrix.board }}"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy server.py
+        run: cp device/server.py ${{ matrix.dest }}
+
+      - name: Restart service
+        run: sudo systemctl restart fuzzy-stream
