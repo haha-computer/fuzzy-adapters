@@ -13,7 +13,10 @@ jobs:
       - uses: astral-sh/ruff-action@v3
 
   hardware-test:
-    runs-on: [self-hosted, linux, ARM64, rpi]
+    strategy:
+      matrix:
+        board: [rpi, coral]
+    runs-on: [self-hosted, linux, ARM64, "${{ matrix.board }}"]
     steps:
       - uses: actions/checkout@v4
 
