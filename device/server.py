@@ -14,7 +14,8 @@ import websockets
 
 CONNECTIONS = set()
 HEX = "0123456789abcdef"
-TICK = 0.02  # 50 digits per second
+TICK = 0.02  # interval between individual digits (20 ms = 50 Hz)
+BATCH_SIZE = 4  # chars per WebSocket message; one send every TICK * BATCH_SIZE ms
 TEMP_INTERVAL = 1.0  # read temperature every second
 
 _temp_cmd = None  # set once at startup
@@ -83,8 +84,9 @@ async def entropy_loop():
 async def broadcast():
     while True:
         if CONNECTIONS:
-            websockets.broadcast(CONNECTIONS, random.choice(HEX))
-        await asyncio.sleep(TICK)
+            batch = "".join(random.choice(HEX) for _ in range(BATCH_SIZE))
+            websockets.broadcast(CONNECTIONS, batch)
+        await asyncio.sleep(TICK * BATCH_SIZE)
 
 
 async def handler(websocket):

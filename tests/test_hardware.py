@@ -58,9 +58,9 @@ async def test_server_streams_hex_digits():
                 received = set()
                 for _ in range(20):
                     msg = await asyncio.wait_for(ws.recv(), timeout=2.0)
-                    assert msg in srv.HEX, f"Got unexpected message: {msg!r}"
-                    received.add(msg)
-                # With 20 samples at random we expect more than one unique digit
+                    assert all(ch in srv.HEX for ch in msg), f"Got unexpected message: {msg!r}"
+                    received.update(msg)
+                # With 20 messages (each up to BATCH_SIZE chars) we expect multiple unique digits
                 assert len(received) > 1, "Stream shows no variety — RNG may be broken"
             finally:
                 broadcast_task.cancel()
