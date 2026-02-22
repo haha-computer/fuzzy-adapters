@@ -58,7 +58,11 @@ def read_temp() -> float | None:
 
 def stir_entropy(temp: float | None):
     """Re-seed the RNG by mixing temperature, high-resolution time, and current RNG state."""
-    blob = struct.pack("d", time.time()) + struct.pack("Q", random.getrandbits(64))
+    blob = (
+        struct.pack("d", time.time())
+        + struct.pack("d", time.perf_counter())
+        + struct.pack("Q", random.getrandbits(64))
+    )
     if temp is not None:
         blob += struct.pack("d", temp)
     blob += os.urandom(8)
