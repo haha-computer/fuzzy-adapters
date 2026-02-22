@@ -3,6 +3,7 @@ const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
 const MAX_BODIES = 200;
 const R = 16;
+const FONT = `700 ${R * 1.1}px system-ui, -apple-system, sans-serif`;
 
 const STREAMS = [
   { url: "wss://rand.haha.computer", side: "left" },
@@ -107,7 +108,7 @@ function draw(now) {
 
   cull();
 
-  ctx.font = `700 ${R * 1.1}px system-ui, -apple-system, sans-serif`;
+  ctx.font = FONT;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
