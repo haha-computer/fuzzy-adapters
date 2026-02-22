@@ -99,7 +99,7 @@ function cull() {
 let lastTime = null;
 
 function draw(now) {
-  const delta = lastTime !== null ? Math.min(now - lastTime, 50) : 16.667;
+  const delta = lastTime !== null ? Math.min(now - lastTime, 16.667) : 16.667;
   lastTime = now;
   Engine.update(engine, delta);
 
