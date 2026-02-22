@@ -1,4 +1,4 @@
-const { Engine, Bodies, Body, Composite, Runner } = Matter;
+const { Engine, Bodies, Body, Composite } = Matter;
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
 const MAX_BODIES = 200;
@@ -95,7 +95,13 @@ function cull() {
   }
 }
 
-function draw() {
+let lastTime = null;
+
+function draw(now) {
+  const delta = lastTime !== null ? Math.min(now - lastTime, 50) : 16.667;
+  lastTime = now;
+  Engine.update(engine, delta);
+
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
@@ -127,8 +133,7 @@ function draw() {
   requestAnimationFrame(draw);
 }
 
-Runner.run(Runner.create(), engine);
-draw();
+requestAnimationFrame(draw);
 
 // --- WebSocket connections ---
 

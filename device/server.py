@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import os
 import random
 import shutil
 import struct
@@ -60,6 +61,7 @@ def stir_entropy(temp: float | None):
     blob = struct.pack("d", time.time()) + struct.pack("Q", random.getrandbits(64))
     if temp is not None:
         blob += struct.pack("d", temp)
+    blob += os.urandom(8)
     seed = int.from_bytes(hashlib.sha256(blob).digest()[:8], "little")
     random.seed(seed)
 
