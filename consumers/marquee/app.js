@@ -29,6 +29,7 @@ engine.positionIterations = 4;
 engine.velocityIterations = 4;
 engine.constraintIterations = 2;
 const digitBodies = [];
+const digitQueue = { left: [], right: [] };
 
 function refreshTheme() {
   const styles = getComputedStyle(document.documentElement);
@@ -102,6 +103,13 @@ function draw(now) {
   const delta = lastTime !== null ? Math.min(now - lastTime, 16.6) : 16.6;
   lastTime = now;
   Engine.update(engine, delta);
+
+  const MAX_PER_FRAME = 3;
+  for (const side of ["left", "right"]) {
+    const q = digitQueue[side];
+    const n = Math.min(q.length, MAX_PER_FRAME);
+    for (let i = 0; i < n; i++) fireDigit(q.shift(), side);
+  }
 
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
@@ -183,7 +191,7 @@ function createConnection(stream) {
     };
 
     socket.onmessage = (e) => {
-      fireDigit(e.data, stream.side);
+      digitQueue[stream.side].push(e.data);
       conn.lastData = Date.now();
     };
 
