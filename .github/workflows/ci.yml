@@ -12,6 +12,18 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/ruff-action@v3
 
+  browser-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - run: npm install
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+
   hardware-test:
     strategy:
       matrix:
