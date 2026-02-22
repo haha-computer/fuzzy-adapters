@@ -18,8 +18,8 @@ Physical-world entropy streamed from two single-board computers to browser-based
 
 | Board | Hostname | SSH | Tunnel | server.py |
 |-------|----------|-----|--------|-----------|
-| Google Coral Dev Board | `indigo-goose` | `ssh -i ~/.config/mdt/keys/mdt.key mendel@192.168.0.61` | `rand` → `wss://rand.haha.computer` | `/home/mendel/server.py` |
-| Raspberry Pi Zero 2 W | `rpi.local` | `ssh -i ~/.ssh/id_ed25519_rpi matt@rpi.local` | `entropy` → `wss://entropy.haha.computer` | `/home/matt/server.py` |
+| Google Coral Dev Board | `indigo-goose` | `ssh mendel@indigo-goose.local` (mdt key) | `rand` → `wss://rand.haha.computer` | `/home/mendel/server.py` |
+| Raspberry Pi Zero 2 W | `rpi.local` | `ssh matt@rpi.local` (ed25519 key) | `entropy` → `wss://entropy.haha.computer` | `/home/matt/server.py` |
 
 Both boards run Python 3 at `/usr/bin/python3`. The Coral is on **Python 3.7** (Mendel Linux), so `device/server.py` must stay compatible — no `X | Y` union syntax, no walrus operator, etc. The `from __future__ import annotations` import at the top handles type hint compatibility.
 
