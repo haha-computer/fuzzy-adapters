@@ -6,6 +6,13 @@ __pycache__/
 *.py[cod]
 .venv/
 
+# Node
+node_modules/
+
+# Playwright
+test-results/
+playwright-report/
+
 # Local config/artifacts
 .env
 .env.*
