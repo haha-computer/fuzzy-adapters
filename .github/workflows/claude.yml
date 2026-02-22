@@ -8,6 +8,7 @@ on:
 
 jobs:
   claude:
+    if: github.event.sender.type != 'Bot'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
