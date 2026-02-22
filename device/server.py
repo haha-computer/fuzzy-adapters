@@ -103,7 +103,7 @@ async def handler(websocket):
 async def main():
     detect_device()
     stir_entropy(read_temp())  # initial stir before we start
-    async with websockets.serve(handler, "0.0.0.0", 8765):
+    async with websockets.serve(handler, "0.0.0.0", 8765, compression=None):
         print("Streaming on ws://0.0.0.0:8765")
         asyncio.create_task(entropy_loop())
         await broadcast()
