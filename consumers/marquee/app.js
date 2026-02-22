@@ -191,6 +191,7 @@ function createConnection(stream) {
     };
 
     socket.onmessage = (e) => {
+      if (document.hidden) return;
       digitQueue[stream.side].push(e.data);
       conn.lastData = Date.now();
     };
