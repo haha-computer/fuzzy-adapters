@@ -10,8 +10,8 @@ Physical-world entropy streamed from two single-board computers to browser-based
 [Pi Zero 2 W] ──entropy tunnel──► wss://entropy.haha.computer ►
 ```
 
-- `device/server.py` — WebSocket server (same file runs on both boards). Binds `0.0.0.0:8765`, broadcasts one random hex digit at 50/sec, stirs CPU temperature into the RNG every second.
-- `consumers/marquee/` — Ball-pit visualiser (Matter.js). Coral fires from the left, Pi fires from the right. Hosted on Cloudflare Pages (auto-deploys on push to `main`).
+- `device/server.py` — WebSocket server (same file runs on both boards). Binds `0.0.0.0:8765`, broadcasts a batch of 4 random hex chars every 80ms, stirs CPU temperature into the RNG every second.
+- `consumers/marquee/` — Ball-pit visualiser (Matter.js). Coral fires from the left, Pi fires from the right. Each character in a batch becomes one ball. Hosted on Cloudflare Pages (auto-deploys on push to `main`).
 - `consumers/pond/` — Experimental second consumer.
 
 ## Devices
@@ -35,30 +35,40 @@ Both services are enabled and start automatically on boot.
 The full loop runs automatically — no manual deploys needed.
 
 **On every PR:**
-- **lint** — ruff, GitHub-hosted Ubuntu
+- **lint** — ruff (Python) + Biome (JS), GitHub-hosted Ubuntu
+- **browser-test** — Playwright sanity check on the marquee consumer, GitHub-hosted Ubuntu
 - **hardware-test** — runs on both `rpi` and `coral` self-hosted runners in parallel
 
 **On merge to main (after CI passes):**
 - **deploy** — each runner copies `server.py` to its own device and restarts `fuzzy-stream.service`
 
-`tests/test_hardware.py` covers: temp sensor returns a plausible float, entropy stir functions don't crash, and the WebSocket server streams valid hex digits. Tests use port 8766 so they never touch the live service on 8765.
+`tests/test_hardware.py` covers: temp sensor returns a plausible float, entropy stir functions don't crash, and the WebSocket server streams valid hex batches. Tests use port 8766 so they never touch the live service on 8765.
+
+`tests/browser/marquee.spec.js` covers: page loads, canvas is visible, status dots are created, no uncaught JS errors.
 
 Don't merge a PR with a failing hardware-test — that check is the ground truth.
 
 ## Contributing
 
-**Never push directly to `main`.** The deploy pipeline runs on merge, so main = production.
+**Never push directly to `main`.** Branch protection enforces this — direct pushes are blocked. The deploy pipeline runs on merge, so main = production.
 
 1. Create a branch and open a PR
-2. CI runs automatically — lint on Ubuntu, hardware tests on both boards
+2. CI runs automatically — lint, browser test, and hardware tests on both boards
 3. Merge only when all checks are green
 4. Deploy runs automatically after merge — no manual steps needed
 
 ## Dev setup
 
 ```bash
+# Python
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt -r requirements-test.txt
 python device/server.py        # runs locally on ws://localhost:8765
 pytest tests/ -v               # run hardware tests locally
+
+# JS (linting + browser tests)
+npm install
+npx biome check consumers/     # JS lint
+npx playwright install --with-deps chromium
+npx playwright test            # browser sanity tests
 ```
