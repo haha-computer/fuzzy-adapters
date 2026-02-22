@@ -25,4 +25,4 @@ jobs:
           prompt: "Please implement the fix or feature described in this issue. When done, run `gh pr create` with a clear title and body to open a pull request — do not just push the branch and leave a link."
           track_progress: "true"
           use_sticky_comment: "true"
-          claude_args: "--max-turns 15 --allowedTools 'Bash(gh pr create*)'"
+          claude_args: "--max-turns 15 --allowedTools 'Bash(gh pr create:*)'"
