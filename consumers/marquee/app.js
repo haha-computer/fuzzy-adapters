@@ -30,6 +30,7 @@ engine.velocityIterations = 4;
 engine.constraintIterations = 2;
 const digitBodies = [];
 const digitQueue = { left: [], right: [] };
+const MAX_PER_FRAME = 3;
 
 function refreshTheme() {
   const styles = getComputedStyle(document.documentElement);
@@ -104,7 +105,6 @@ function draw(now) {
   lastTime = now;
   Engine.update(engine, delta);
 
-  const MAX_PER_FRAME = 3;
   for (const side of ["left", "right"]) {
     const q = digitQueue[side];
     const n = Math.min(q.length, MAX_PER_FRAME);
