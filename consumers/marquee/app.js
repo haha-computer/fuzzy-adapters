@@ -31,6 +31,12 @@ engine.constraintIterations = 2;
 const digitBodies = [];
 const digitQueue = { left: [], right: [] };
 const MAX_PER_FRAME = 3;
+const FIXED_STEP_MS = 1000 / 60;
+const MAX_FRAME_DELTA_MS = 100;
+const SPAWNS_PER_MS = MAX_PER_FRAME / FIXED_STEP_MS;
+const MAX_SPAWN_BUDGET = MAX_PER_FRAME * 8;
+const SIDES = ["left", "right"];
+const spawnBudget = { left: 0, right: 0 };
 
 function refreshTheme() {
   const styles = getComputedStyle(document.documentElement);
@@ -56,12 +62,7 @@ refreshTheme();
 resize();
 
 function fireDigit(ch, side) {
-  while (digitBodies.length >= MAX_BODIES) {
-    const old = digitBodies.shift();
-    if (old) {
-      Composite.remove(engine.world, old);
-    }
-  }
+  trimBodiesToCap();
 
   const y = H * 0.4 + (Math.random() - 0.5) * 60;
   const fromLeft = side === "left";
@@ -88,33 +89,59 @@ function fireDigit(ch, side) {
   digitBodies.push(body);
 }
 
+function isOffscreen(b) {
+  return b.position.y > H + R * 2 || b.position.x > W + R * 2 || b.position.x < -R * 2;
+}
+
+function removeBodyAt(index) {
+  const [body] = digitBodies.splice(index, 1);
+  if (body) Composite.remove(engine.world, body);
+}
+
+function trimBodiesToCap() {
+  while (digitBodies.length >= MAX_BODIES) {
+    let removeIndex = -1;
+    for (let i = 0; i < digitBodies.length; i++) {
+      if (isOffscreen(digitBodies[i])) {
+        removeIndex = i;
+        break;
+      }
+    }
+    removeBodyAt(removeIndex >= 0 ? removeIndex : 0);
+  }
+}
+
 function cull() {
   for (let i = digitBodies.length - 1; i >= 0; i--) {
     const b = digitBodies[i];
-    if (b.position.y > H + R * 2 || b.position.x > W + R * 2 || b.position.x < -R * 2) {
-      Composite.remove(engine.world, b);
-      digitBodies.splice(i, 1);
-    }
+    if (isOffscreen(b)) removeBodyAt(i);
   }
 }
 
 let lastTime = null;
+let stepAccumulator = 0;
 
 function draw(now) {
-  const delta = lastTime !== null ? Math.min(now - lastTime, 16.6) : 16.6;
+  const frameDelta = lastTime !== null ? Math.min(now - lastTime, MAX_FRAME_DELTA_MS) : FIXED_STEP_MS;
   lastTime = now;
-  Engine.update(engine, delta);
+  stepAccumulator += frameDelta;
+  while (stepAccumulator >= FIXED_STEP_MS) {
+    Engine.update(engine, FIXED_STEP_MS);
+    stepAccumulator -= FIXED_STEP_MS;
+  }
 
-  for (const side of ["left", "right"]) {
+  cull();
+
+  for (const side of SIDES) {
+    spawnBudget[side] = Math.min(spawnBudget[side] + frameDelta * SPAWNS_PER_MS, MAX_SPAWN_BUDGET);
     const q = digitQueue[side];
-    const n = Math.min(q.length, MAX_PER_FRAME);
+    const n = Math.min(q.length, Math.floor(spawnBudget[side]));
     for (let i = 0; i < n; i++) fireDigit(q.shift(), side);
+    spawnBudget[side] -= n;
   }
 
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
-
-  cull();
 
   ctx.font = FONT;
   ctx.textAlign = "center";
